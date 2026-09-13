@@ -21,7 +21,10 @@ export interface VoicePipeline {
   /** Interrupts any in-progress speech immediately and hands the turn back to the mic. */
   cancelSpeaking: () => void;
   startListening: () => void;
+  /** Mutes the mic without submitting anything (used internally while the assistant speaks). */
   stopListening: () => void;
+  /** Ends the user's turn immediately, submitting whatever's been heard so far as their answer. */
+  stopListeningAndSubmit: () => void;
 }
 
 export function useVoicePipeline({ onFinalTranscript, createInput, createOutput }: UseVoicePipelineOptions): VoicePipeline {
@@ -72,6 +75,12 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     setListening(false);
   }, []);
 
+  const stopListeningAndSubmit = useCallback(() => {
+    setInterimText("");
+    inputRef.current?.stopAndSubmit();
+    setListening(false);
+  }, []);
+
   const speak = useCallback(
     async (text: string) => {
       stopListening(); // mute the mic while the assistant talks, avoids self-transcription
@@ -87,5 +96,16 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     outputRef.current?.cancel();
   }, []);
 
-  return { supported, listening, speaking, interimText, micError, speak, cancelSpeaking, startListening, stopListening };
+  return {
+    supported,
+    listening,
+    speaking,
+    interimText,
+    micError,
+    speak,
+    cancelSpeaking,
+    startListening,
+    stopListening,
+    stopListeningAndSubmit,
+  };
 }

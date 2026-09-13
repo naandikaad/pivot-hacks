@@ -42,26 +42,32 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, voiceEnabled]);
 
-  function toggleMic() {
-    setMicEnabled((was) => {
-      const next = !was;
-      if (next) pipeline.startListening();
-      else pipeline.stopListening();
-      return next;
-    });
-  }
-
-  function toggleVoice() {
-    setVoiceEnabled((was) => {
-      const next = !was;
-      if (!next) pipeline.cancelSpeaking(); // interrupt immediately when turned off
-      return next;
-    });
-  }
-
   const activeConcept = session.activeConceptIndex !== null ? session.concepts[session.activeConceptIndex] : null;
   const canRespondByVoice = session.phase === "opening" || session.phase === "followup";
   const isExitCheck = session.phase === "exit-check";
+
+  // Plain reads + a single side effect per click, rather than doing the side
+  // effect inside a setState updater function - React can invoke updaters
+  // more than once (e.g. StrictMode), which would double-submit an answer.
+  function toggleMic() {
+    const next = !micEnabled;
+    setMicEnabled(next);
+    if (next) {
+      pipeline.startListening();
+    } else if (canRespondByVoice) {
+      // End the user's turn now and send whatever's been heard so far,
+      // instead of silently discarding it.
+      pipeline.stopListeningAndSubmit();
+    } else {
+      pipeline.stopListening();
+    }
+  }
+
+  function toggleVoice() {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    if (!next) pipeline.cancelSpeaking(); // interrupt immediately when turned off
+  }
 
   return (
     <div className="conversation">
@@ -88,7 +94,7 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
 
         <div className="voice-controls">
           <button type="button" onClick={toggleMic} disabled={!pipeline.supported}>
-            {micEnabled ? "🎤 Stop listening" : "🎤 Start listening"}
+            {micEnabled ? (canRespondByVoice ? "🎤 Stop & send" : "🎤 Stop listening") : "🎤 Start listening"}
           </button>
           <button type="button" onClick={toggleVoice} disabled={!pipeline.supported}>
             {pipeline.speaking ? "⏹ Stop speaking" : voiceEnabled ? "🔊 Voice on" : "🔇 Voice off"}

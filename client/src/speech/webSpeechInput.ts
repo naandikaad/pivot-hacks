@@ -12,6 +12,8 @@ export class WebSpeechInput implements SpeechInputProvider {
   private speechStartCb: (() => void) | null = null;
   private errorCb: ((message: string) => void) | null = null;
   private finalTranscript = "";
+  /** The most recent not-yet-final chunk, kept so a manual stop() can still submit it. */
+  private lastInterim = "";
   private silenceTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldRestart = false;
   private readonly silenceMs: number;
@@ -42,6 +44,7 @@ export class WebSpeechInput implements SpeechInputProvider {
           interim += result[0].transcript;
         }
       }
+      this.lastInterim = interim;
       this.resultCb?.(`${this.finalTranscript}${interim}`.trim(), false);
       this.resetSilenceTimer();
     };
@@ -70,8 +73,9 @@ export class WebSpeechInput implements SpeechInputProvider {
   }
 
   private finalizeTurn() {
-    const text = this.finalTranscript.trim();
+    const text = `${this.finalTranscript}${this.lastInterim}`.trim();
     this.finalTranscript = "";
+    this.lastInterim = "";
     if (text.length > 0) {
       this.resultCb?.(text, true);
     }
@@ -81,6 +85,7 @@ export class WebSpeechInput implements SpeechInputProvider {
     if (this.recognition) return;
     this.shouldRestart = true;
     this.finalTranscript = "";
+    this.lastInterim = "";
     this.recognition = this.createRecognition();
     this.recognition.start();
   }
@@ -90,6 +95,19 @@ export class WebSpeechInput implements SpeechInputProvider {
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
     this.recognition?.stop();
     this.recognition = null;
+  }
+
+  /**
+   * Stops recognition immediately and, unlike stop(), submits whatever has
+   * been heard so far - even a still-interim chunk that hasn't been
+   * finalized by the recognizer yet. Used when the user explicitly ends
+   * their turn (the "Stop listening" button) instead of waiting out the
+   * silence timeout.
+   */
+  stopAndSubmit(): void {
+    if (this.silenceTimer) clearTimeout(this.silenceTimer);
+    this.finalizeTurn();
+    this.stop();
   }
 
   onResult(cb: (text: string, isFinal: boolean) => void): void {
