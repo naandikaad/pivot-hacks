@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 const client = new Anthropic();
 
@@ -36,6 +37,13 @@ export interface LLMJSONCallOptions<T> extends LLMCallOptions {
  * once with the validation error fed back to the model if parsing fails.
  * Every prompt template in ./prompts uses this so grading/question/hint/summary
  * output always arrives as typed data the state machine can consume directly.
+ *
+ * The zod schema is converted to a JSON Schema and included directly in the
+ * system prompt - the model is never told to guess field names/types from
+ * prose alone. Without this, the model has no way to know our schema expects
+ * e.g. `conceptId`/`rationale` rather than whatever plausible-sounding keys
+ * it invents, and every response fails validation identically (retry does
+ * not help since the model has no more information the second time either).
  */
 export async function callClaudeJSON<T>({
   system,
@@ -43,7 +51,8 @@ export async function callClaudeJSON<T>({
   schema,
   maxTokens = 1536,
 }: LLMJSONCallOptions<T>): Promise<T> {
-  const jsonSystem = `${system}\n\nRespond with ONLY a single valid JSON object matching the requested shape. No markdown fences, no commentary before or after.`;
+  const jsonSchema = zodToJsonSchema(schema);
+  const jsonSystem = `${system}\n\nRespond with ONLY a single valid JSON object that strictly conforms to this JSON Schema - use exactly these property names and types, and populate every required field:\n${JSON.stringify(jsonSchema, null, 2)}\n\nNo markdown fences, no commentary before or after.`;
 
   const attempt = async (extra?: string): Promise<T> => {
     const response = await client.messages.create({
