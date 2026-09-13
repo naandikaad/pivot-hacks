@@ -206,10 +206,12 @@ export type UserSignal = "not-sure" | "dont-know" | "understand-topic";
 
 /**
  * Handles the three control buttons. "not-sure" fast-forwards to the next
- * hint (or gives up if hints are exhausted); "dont-know" stops probing this
- * concept immediately and routes it to the study summary; "understand-topic"
- * requests an early exit, which the caller must reconcile against
- * getPendingConcepts() before actually ending the session.
+ * hint (or gives up if hints are exhausted); "dont-know" ends the session
+ * immediately - the user is signaling they're done, not just stuck on this
+ * one concept, so it jumps straight to the study summary rather than
+ * continuing on to the next gap; "understand-topic" requests an early exit,
+ * which the caller must reconcile against getPendingConcepts() before
+ * actually ending the session.
  */
 export function applyUserSignal(state: SessionState, signal: UserSignal): SessionState {
   if (signal === "understand-topic") {
@@ -221,8 +223,11 @@ export function applyUserSignal(state: SessionState, signal: UserSignal): Sessio
   const track = state.concepts[idx];
 
   if (signal === "dont-know") {
+    // Ends the whole session immediately, not just this concept - "I don't
+    // know" is the user's signal that they're done and want their weak
+    // spots summarized rather than continuing to be probed.
     const gaveUp = updateConceptTrack(state, idx, { stage: "gave-up" });
-    return advanceToNextGapOrFinish(gaveUp);
+    return { ...gaveUp, activeConceptIndex: null, phase: "summary" };
   }
 
   // "not-sure": jump forward into (or deeper into) the hint ladder.

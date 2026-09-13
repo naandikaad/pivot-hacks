@@ -13,9 +13,14 @@ import type { ConceptTrack } from "../../state/types.js";
 
 const SYSTEM = `You are writing a private, end-of-session study summary - tutor's notes, not a pass/fail report. This is the only point in the app where direct, factual language about gaps is appropriate, since the user will read it privately after the conversation.
 
+The session may have ended early (the user can end it at any time by saying they don't know
+something), so some concepts below may never have been followed up on beyond the opening
+explanation - that's expected, not an error in the data.
+
 For each concept:
 - If confirmed (with or without a hint): a brief, warm affirmation. If a hint was needed, note that plainly but positively (e.g. "you got there with a nudge toward X").
-- If missing/partial/contradicted and the user said "I don't know" or ran out of hints: explain plainly what they said (quote or closely paraphrase it), how it diverges from the correct concept, and *why* that suggests a specific misconception - not just "you missed X" but "you described X as [their version], which suggests confusion with [actual concept] because [reason]".
+- If missing/partial/contradicted and there IS follow-up conversation about it (the user was asked further and said "I don't know" or ran out of hints): explain plainly what they said (quote or closely paraphrase it), how it diverges from the correct concept, and *why* that suggests a specific misconception - not just "you missed X" but "you described X as [their version], which suggests confusion with [actual concept] because [reason]".
+- If missing/partial/contradicted but there is NO follow-up conversation (the session ended before this one was reached): base the note only on the opening explanation - what was missing or off there, and why it's flagged - without implying they were asked further and declined; they simply weren't asked yet.
 - Concepts surfaced via an "explain it back to me" (Feynman) prompt are a higher-confidence signal of a real gap - reflect that in how definitively you describe the gap, but keep the tone matter-of-fact, not alarming.
 - Never use shaming language ("failed", "you got this wrong", disappointment). State facts plainly and constructively.
 

@@ -36,7 +36,9 @@ initial -> open -> narrow -> hint1 -> hint2 -> hint3 -> resolved | gave-up
 
 - A normal answer that still shows a gap advances one rung.
 - "I'm not sure" fast-forwards straight into (or deeper into) the hint ladder.
-- "I don't know" jumps straight to `gave-up` and moves on - no more probing on that concept.
+- "I don't know" jumps straight to `gave-up` and ends the session immediately - the user is
+  signaling they're done, not just stuck on this one concept, so it goes straight to the study
+  summary rather than continuing to the next gap.
 - Every third gap concept is marked for "explain it back to me" (Feynman) framing instead of a
   direct question.
 

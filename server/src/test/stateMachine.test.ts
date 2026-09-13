@@ -118,11 +118,14 @@ describe("applyUserSignal", () => {
     expect(s.activeConceptIndex).toBe(1);
   });
 
-  it("'dont-know' stops probing immediately and advances", () => {
+  it("'dont-know' ends the session immediately rather than advancing to the next concept", () => {
     let s = setup();
     s = applyUserSignal(s, "dont-know");
     expect(s.concepts[0].stage).toBe("gave-up");
-    expect(s.activeConceptIndex).toBe(1);
+    expect(s.phase).toBe("summary");
+    expect(s.activeConceptIndex).toBeNull();
+    // the other concept was never reached - untouched, not force-resolved
+    expect(s.concepts[1].stage).toBe("initial");
   });
 
   it("'understand-topic' moves to exit-check without losing progress", () => {
@@ -166,9 +169,11 @@ describe("Feynman mode cadence", () => {
       { conceptId: "c3", status: "missing" },
     ]);
     expect(s.concepts[0].usedFeynman).toBe(false);
-    s = applyUserSignal(s, "dont-know"); // resolve c0, move to c1
+    // "dont-know" now ends the whole session, so advance via a plain
+    // confirmed answer instead - it still moves on to the next gap.
+    s = applyFollowUpGrading(s, "confirmed"); // resolve c0, move to c1
     expect(s.concepts[1].usedFeynman).toBe(false);
-    s = applyUserSignal(s, "dont-know"); // resolve c1, move to c2 (3rd gap)
+    s = applyFollowUpGrading(s, "confirmed"); // resolve c1, move to c2 (3rd gap)
     expect(s.concepts[2].usedFeynman).toBe(true);
   });
 });
