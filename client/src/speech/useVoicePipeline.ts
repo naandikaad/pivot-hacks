@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebSpeechInput } from "./webSpeechInput";
-import { WebSpeechOutput } from "./webSpeechOutput";
+import { ElevenLabsOutput } from "./elevenLabsOutput";
 import type { SpeechInputProvider, SpeechOutputProvider } from "./types";
 
 export interface UseVoicePipelineOptions {
@@ -44,7 +44,7 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
 
   useEffect(() => {
     const input = createInput ? createInput() : new WebSpeechInput();
-    const output = createOutput ? createOutput() : new WebSpeechOutput();
+    const output = createOutput ? createOutput() : new ElevenLabsOutput();
     inputRef.current = input;
     outputRef.current = output;
     setSupported(input.isSupported() && output.isSupported());

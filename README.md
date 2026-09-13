@@ -72,18 +72,25 @@ framed conversationally rather than as a called-out past failure.
 ### Voice pipeline
 
 `client/src/speech/` defines `SpeechInputProvider` / `SpeechOutputProvider` interfaces so the
-rest of the app never talks to a specific engine. The bundled implementations
-(`webSpeechInput.ts`, `webSpeechOutput.ts`) use the browser's native Web Speech API:
+rest of the app never talks to a specific engine:
 
-- Continuous recognition with streamed interim results shown live as the user talks; a turn is
-  only ever finalized and submitted by the explicit "Stop & send" button, never on a pause -
-  the user decides when they're done, not a timeout.
+- **Input (STT)**: `webSpeechInput.ts` uses the browser's native Web Speech API. Continuous
+  recognition with streamed interim results shown live as the user talks; a turn is only ever
+  finalized and submitted by the explicit "Stop & send" button, never on a pause - the user
+  decides when they're done, not a timeout.
+- **Output (TTS)**: `elevenLabsOutput.ts` calls ElevenLabs through the server's `/api/tts` proxy
+  (`server/src/routes/tts.ts`) so the ElevenLabs API key never reaches the browser. A safety-net
+  timeout (scaled to text length) guarantees a stuck request/playback can never hang the
+  conversation forever, and real failures surface as a visible "Voice error" instead of silently
+  doing nothing. `webSpeechOutput.ts` (the original browser-native TTS implementation) is still
+  in the codebase, fully working, and a one-line swap away in `useVoicePipeline.ts` if you ever
+  want to go back to it or compare the two.
 - `useVoicePipeline` handles turn-taking: the mic is muted while the assistant is speaking and
   resumed automatically once playback ends.
 - A typed-text fallback is always available (unsupported browsers, noisy environments).
 
-Swap in a streaming provider (Deepgram, ElevenLabs, etc.) by implementing the two interfaces -
-no other file needs to change.
+Swap in a different provider (Deepgram, Google Cloud TTS, etc.) by implementing the two
+interfaces - no other file needs to change.
 
 ## Running it
 
@@ -94,6 +101,7 @@ npm install
 
 # terminal 1
 export ANTHROPIC_API_KEY=sk-ant-...
+export ELEVENLABS_API_KEY=...     # from elevenlabs.io - required for the assistant to speak
 npm run dev:server        # http://localhost:8787
 
 # terminal 2
@@ -123,7 +131,7 @@ GitHub Pages only serves static files, so it can host `client/` but **not** `ser
 two need to be deployed separately:
 
 1. **Server**: deploy `server/` to any Node host (Render, Fly.io, Railway, a VPS, ...) with
-   `ANTHROPIC_API_KEY` set, and note its public URL.
+   `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` set, and note its public URL.
 2. **Client**: `.github/workflows/deploy-pages.yml` builds `client/` and publishes it to GitHub
    Pages automatically on push. Before it'll work:
    - In the repo's **Settings -> Pages**, set **Source** to **GitHub Actions** (not "Deploy from
