@@ -49,7 +49,12 @@ export async function startSession({ topic, customCriteria }: StartSessionInput)
   const concepts = [...reviewConcepts, ...generatedConcepts];
 
   const state = createSession(topic, concepts, customCriteria ? "custom" : "generated");
-  return { state, prompt: OPENING_LINE(topic) };
+  const opening = OPENING_LINE(topic);
+  // Record it into the transcript too, not just return it for TTS - otherwise
+  // a user whose browser silently blocks speech synthesis sees an empty chat
+  // log with no indication of what to do.
+  const withOpening = recordAssistantPrompt(state, opening, "question");
+  return { state: withOpening, prompt: opening };
 }
 
 function priorQuestionsFor(entries: ConceptTrackEntry[]): string[] {

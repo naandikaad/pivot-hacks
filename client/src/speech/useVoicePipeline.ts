@@ -18,6 +18,8 @@ export interface VoicePipeline {
   micError: string | null;
   /** Speaks text, muting the mic first and resuming listening once done (natural turn-taking). */
   speak: (text: string) => Promise<void>;
+  /** Interrupts any in-progress speech immediately and hands the turn back to the mic. */
+  cancelSpeaking: () => void;
   startListening: () => void;
   stopListening: () => void;
 }
@@ -79,5 +81,11 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     [startListening, stopListening]
   );
 
-  return { supported, listening, speaking, interimText, micError, speak, startListening, stopListening };
+  const cancelSpeaking = useCallback(() => {
+    // Triggers the output's onSpeakingChange(false) and resolves the pending
+    // speak() promise, which itself calls startListening() - no need to duplicate that here.
+    outputRef.current?.cancel();
+  }, []);
+
+  return { supported, listening, speaking, interimText, micError, speak, cancelSpeaking, startListening, stopListening };
 }

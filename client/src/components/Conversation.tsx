@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVoicePipeline } from "../speech/useVoicePipeline";
 import { TranscriptLog } from "./TranscriptLog";
 import { ConceptTracker } from "./ConceptTracker";
@@ -18,14 +18,46 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
   const lastSpokenRef = useRef<string | null>(null);
   const pipeline = useVoicePipeline({ onFinalTranscript: onUserUtterance });
 
+  // User-controlled intent, independent of the pipeline's own auto mute/resume
+  // around TTS playback - a manual mic toggle would otherwise get silently
+  // undone the next time the assistant finishes speaking.
+  const [micEnabled, setMicEnabled] = useState(true);
+  const micEnabledRef = useRef(micEnabled);
+  micEnabledRef.current = micEnabled;
+
+  // Whether the assistant is allowed to speak its responses aloud at all.
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
   useEffect(() => {
-    if (prompt && prompt !== lastSpokenRef.current) {
-      lastSpokenRef.current = prompt;
-      void pipeline.speak(prompt);
+    if (!prompt || prompt === lastSpokenRef.current) return;
+    lastSpokenRef.current = prompt;
+    if (voiceEnabled) {
+      void pipeline.speak(prompt).then(() => {
+        if (!micEnabledRef.current) pipeline.stopListening();
+      });
+    } else if (micEnabledRef.current) {
+      pipeline.startListening();
     }
-    // pipeline.speak is stable across renders (see useVoicePipeline), safe to omit
+    // pipeline methods are stable across renders (see useVoicePipeline), safe to omit
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt]);
+  }, [prompt, voiceEnabled]);
+
+  function toggleMic() {
+    setMicEnabled((was) => {
+      const next = !was;
+      if (next) pipeline.startListening();
+      else pipeline.stopListening();
+      return next;
+    });
+  }
+
+  function toggleVoice() {
+    setVoiceEnabled((was) => {
+      const next = !was;
+      if (!next) pipeline.cancelSpeaking(); // interrupt immediately when turned off
+      return next;
+    });
+  }
 
   const activeConcept = session.activeConceptIndex !== null ? session.concepts[session.activeConceptIndex] : null;
   const canRespondByVoice = session.phase === "opening" || session.phase === "followup";
@@ -42,13 +74,25 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
           </p>
         )}
 
-        <TranscriptLog entries={session.transcript} interimText={canRespondByVoice ? pipeline.interimText : undefined} />
+        <TranscriptLog
+          entries={session.transcript}
+          interimText={canRespondByVoice && micEnabled ? pipeline.interimText : undefined}
+        />
 
         <div className="mic-status">
           {pipeline.speaking && <span className="status-chip speaking">Speaking…</span>}
           {!pipeline.speaking && pipeline.listening && <span className="status-chip listening">Listening…</span>}
           {pipeline.micError && <span className="status-chip warn">Mic error: {pipeline.micError}</span>}
           {busy && <span className="status-chip busy">Thinking…</span>}
+        </div>
+
+        <div className="voice-controls">
+          <button type="button" onClick={toggleMic} disabled={!pipeline.supported}>
+            {micEnabled ? "🎤 Stop listening" : "🎤 Start listening"}
+          </button>
+          <button type="button" onClick={toggleVoice} disabled={!pipeline.supported}>
+            {pipeline.speaking ? "⏹ Stop speaking" : voiceEnabled ? "🔊 Voice on" : "🔇 Voice off"}
+          </button>
         </div>
 
         <TypedFallback disabled={!canRespondByVoice || busy} onSubmit={onUserUtterance} />
