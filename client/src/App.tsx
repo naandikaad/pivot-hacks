@@ -9,7 +9,7 @@ import {
   submitOpeningExplanation,
   submitSignal,
 } from "./api/client";
-import type { OrchestratorResult, SessionState, SessionSummary, UserSignal } from "./types";
+import type { Difficulty, OrchestratorResult, SessionState, SessionSummary, UserSignal } from "./types";
 
 type AppPhase = "setup" | "active" | "summary";
 
@@ -45,9 +45,9 @@ export default function App() {
     }
   }
 
-  function handleStart(topic: string, customCriteria: string) {
+  function handleStart(topic: string, customCriteria: string, difficulty: Difficulty) {
     void guarded(async () => {
-      const result = await startSession(topic, customCriteria);
+      const result = await startSession(topic, customCriteria, difficulty);
       setPhase("active");
       return result;
     });

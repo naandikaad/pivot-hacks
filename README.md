@@ -1,9 +1,10 @@
 # Voice Knowledge Tester
 
-A voice-based Socratic knowledge tester. You pick a topic (optionally pasting your own
-rubric), explain what you know out loud, and the app asks gentle follow-up questions to
-surface gaps and misconceptions - without ever telling you you're wrong. It ends with a
-private study summary that explains *why* each gap was flagged.
+A voice-based Socratic knowledge tester. You pick a topic and a difficulty (beginner or
+advanced - calibrates both the generated rubric and the follow-up questions), optionally
+pasting your own rubric, explain what you know out loud, and the app asks gentle follow-up
+questions to surface gaps and misconceptions - without ever telling you you're wrong. It ends
+with a private study summary that explains *why* each gap was flagged.
 
 ## Architecture
 
@@ -49,9 +50,9 @@ Five separate templates under `server/src/llm/prompts/`, each independently test
 
 | Template | File | Purpose |
 |---|---|---|
-| (a) Rubric parsing | `parseRubric.ts` | Normalizes a pasted rubric *or* generates one from a bare topic into the same `Concept[]` shape |
+| (a) Rubric parsing | `parseRubric.ts` | Normalizes a pasted rubric *or* generates one from a bare topic into the same `Concept[]` shape, calibrated by the chosen difficulty |
 | (b) Grading | `gradeResponse.ts` | Classifies an explanation (opening or follow-up) as confirmed/partial/missing/contradicted |
-| (c) Follow-up questions | `generateFollowUp.ts` | Open clarification, narrowed question, or Feynman prompt - never reveals the gap |
+| (c) Follow-up questions | `generateFollowUp.ts` | Open clarification, narrowed question, or Feynman prompt, also calibrated by difficulty - never reveals the gap |
 | (d) Hints | `generateHint.ts` | Three escalating hint levels (vague nudge -> named concept -> near-answer) |
 | (e) Study summary | `generateSummary.ts` | The one place direct language is used - explains *why* each gap was flagged, tied to what the user actually said |
 

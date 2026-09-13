@@ -1,13 +1,18 @@
 import { parseRubric } from "../../llm/prompts/parseRubric.js";
 
 async function main() {
-  console.log("--- Generated outline (no custom criteria) ---");
-  const generated = await parseRubric({ topic: "Photosynthesis" });
-  console.log(JSON.stringify(generated, null, 2));
+  console.log("--- Generated outline, beginner ---");
+  const generatedBeginner = await parseRubric({ topic: "Photosynthesis", difficulty: "beginner" });
+  console.log(JSON.stringify(generatedBeginner, null, 2));
+
+  console.log("\n--- Generated outline, advanced (same topic, should look noticeably harder) ---");
+  const generatedAdvanced = await parseRubric({ topic: "Photosynthesis", difficulty: "advanced" });
+  console.log(JSON.stringify(generatedAdvanced, null, 2));
 
   console.log("\n--- Normalized custom rubric ---");
   const custom = await parseRubric({
     topic: "TCP vs UDP",
+    difficulty: "beginner",
     customCriteria: `
       - Must know TCP is connection-oriented, UDP is connectionless
       - Must know TCP guarantees delivery/ordering, UDP does not

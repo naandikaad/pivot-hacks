@@ -16,12 +16,13 @@ import {
   resolveExitCheck,
   type UserSignal,
 } from "../state/stateMachine.js";
-import type { Concept, ConceptTrackEntry, SessionState } from "../state/types.js";
+import type { Concept, ConceptTrackEntry, DifficultyT, SessionState } from "../state/types.js";
 import type { SummaryOutput } from "../llm/schemas.js";
 
 export interface StartSessionInput {
   topic: string;
   customCriteria?: string;
+  difficulty: DifficultyT;
 }
 
 export interface OrchestratorResult {
@@ -34,8 +35,8 @@ export interface OrchestratorResult {
 const OPENING_LINE = (topic: string) =>
   `Let's talk about ${topic}. Go ahead and explain everything you know about it - I'll just listen for now.`;
 
-export async function startSession({ topic, customCriteria }: StartSessionInput): Promise<OrchestratorResult> {
-  const rubric = await parseRubric({ topic, customCriteria });
+export async function startSession({ topic, customCriteria, difficulty }: StartSessionInput): Promise<OrchestratorResult> {
+  const rubric = await parseRubric({ topic, customCriteria, difficulty });
   const generatedConcepts: Concept[] = rubric.concepts.map((c) => ({
     id: nanoid(),
     label: c.label,
@@ -48,7 +49,7 @@ export async function startSession({ topic, customCriteria }: StartSessionInput)
   const reviewConcepts = getReviewConcepts(topic, 3);
   const concepts = [...reviewConcepts, ...generatedConcepts];
 
-  const state = createSession(topic, concepts, customCriteria ? "custom" : "generated");
+  const state = createSession(topic, concepts, customCriteria ? "custom" : "generated", difficulty);
   const opening = OPENING_LINE(topic);
   // Record it into the transcript too, not just return it for TTS - otherwise
   // a user whose browser silently blocks speech synthesis sees an empty chat
@@ -93,6 +94,7 @@ async function producePromptForCurrentStage(state: SessionState): Promise<Orches
     stage,
     useFeynman,
     priorQuestions: priorQuestionsFor(track.history),
+    difficulty: state.difficulty,
   });
   const kind = useFeynman ? "feynman-prompt" : "question";
   const next = recordAssistantPrompt(state, question, kind);

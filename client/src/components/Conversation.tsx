@@ -72,7 +72,9 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
   return (
     <div className="conversation">
       <div className="conversation-main">
-        <h1>{session.topic}</h1>
+        <h1>
+          {session.topic} <span className={`difficulty-badge ${session.difficulty}`}>{session.difficulty}</span>
+        </h1>
 
         {!pipeline.supported && (
           <p className="warn">

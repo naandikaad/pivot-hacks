@@ -20,7 +20,7 @@ function concepts(n: number): Concept[] {
 
 describe("createSession", () => {
   it("starts in the opening phase with all concepts unconfirmed", () => {
-    const s = createSession("Photosynthesis", concepts(3), "generated");
+    const s = createSession("Photosynthesis", concepts(3), "generated", "beginner");
     expect(s.phase).toBe("opening");
     expect(s.concepts).toHaveLength(3);
     expect(s.concepts.every((c) => c.status === "unconfirmed")).toBe(true);
@@ -29,7 +29,7 @@ describe("createSession", () => {
 
 describe("applyInitialGrading", () => {
   it("moves straight to summary when every concept is confirmed", () => {
-    const s = createSession("Topic", concepts(2), "generated");
+    const s = createSession("Topic", concepts(2), "generated", "beginner");
     const graded = applyInitialGrading(s, [
       { conceptId: "c0", status: "confirmed" },
       { conceptId: "c1", status: "confirmed" },
@@ -39,7 +39,7 @@ describe("applyInitialGrading", () => {
   });
 
   it("activates the first gap concept for follow-up", () => {
-    const s = createSession("Topic", concepts(3), "generated");
+    const s = createSession("Topic", concepts(3), "generated", "beginner");
     const graded = applyInitialGrading(s, [
       { conceptId: "c0", status: "confirmed" },
       { conceptId: "c1", status: "missing" },
@@ -53,7 +53,7 @@ describe("applyInitialGrading", () => {
 
 describe("applyFollowUpGrading escalation ladder", () => {
   function setup() {
-    const s = createSession("Topic", concepts(1), "generated");
+    const s = createSession("Topic", concepts(1), "generated", "beginner");
     return applyInitialGrading(s, [{ conceptId: "c0", status: "missing" }]);
   }
 
@@ -96,7 +96,7 @@ describe("applyFollowUpGrading escalation ladder", () => {
 
 describe("applyUserSignal", () => {
   function setup() {
-    const s = createSession("Topic", concepts(2), "generated");
+    const s = createSession("Topic", concepts(2), "generated", "beginner");
     return applyInitialGrading(s, [
       { conceptId: "c0", status: "missing" },
       { conceptId: "c1", status: "missing" },
@@ -135,7 +135,7 @@ describe("applyUserSignal", () => {
 
 describe("resolveExitCheck", () => {
   it("wrapping up anyway marks pending concepts as gave-up and jumps to summary", () => {
-    const s0 = createSession("Topic", concepts(2), "generated");
+    const s0 = createSession("Topic", concepts(2), "generated", "beginner");
     const graded = applyInitialGrading(s0, [
       { conceptId: "c0", status: "missing" },
       { conceptId: "c1", status: "missing" },
@@ -147,7 +147,7 @@ describe("resolveExitCheck", () => {
   });
 
   it("declining resumes the follow-up flow", () => {
-    const s0 = createSession("Topic", concepts(1), "generated");
+    const s0 = createSession("Topic", concepts(1), "generated", "beginner");
     const graded = applyInitialGrading(s0, [{ conceptId: "c0", status: "missing" }]);
     const checked = applyUserSignal(graded, "understand-topic");
     const resumed = resolveExitCheck(checked, false);
@@ -158,7 +158,7 @@ describe("resolveExitCheck", () => {
 
 describe("Feynman mode cadence", () => {
   it("marks every third gap concept for explain-it-back framing", () => {
-    const s0 = createSession("Topic", concepts(4), "generated");
+    const s0 = createSession("Topic", concepts(4), "generated", "beginner");
     let s = applyInitialGrading(s0, [
       { conceptId: "c0", status: "missing" },
       { conceptId: "c1", status: "missing" },

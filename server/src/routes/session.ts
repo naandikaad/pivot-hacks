@@ -20,6 +20,7 @@ function respond(res: import("express").Response, result: OrchestratorResult) {
 const StartSchema = z.object({
   topic: z.string().min(1),
   customCriteria: z.string().optional(),
+  difficulty: z.enum(["beginner", "advanced"]),
 });
 
 sessionRouter.post("/", async (req, res, next) => {

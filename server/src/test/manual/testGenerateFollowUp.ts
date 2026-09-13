@@ -9,10 +9,19 @@ const concept: Concept = {
 };
 
 async function main() {
-  console.log("--- Open clarification ---");
+  console.log("--- Open clarification, beginner ---");
   console.log(
     JSON.stringify(
-      await generateFollowUp({ topic: "Photosynthesis", concept, stage: "open", useFeynman: false, priorQuestions: [] }),
+      await generateFollowUp({ topic: "Photosynthesis", concept, stage: "open", useFeynman: false, priorQuestions: [], difficulty: "beginner" }),
+      null,
+      2
+    )
+  );
+
+  console.log("\n--- Open clarification, advanced (should probe deeper/edge cases) ---");
+  console.log(
+    JSON.stringify(
+      await generateFollowUp({ topic: "Photosynthesis", concept, stage: "open", useFeynman: false, priorQuestions: [], difficulty: "advanced" }),
       null,
       2
     )
@@ -27,6 +36,7 @@ async function main() {
         stage: "narrow",
         useFeynman: false,
         priorQuestions: ["Can you walk me through where exactly inside the plant cell this process happens?"],
+        difficulty: "beginner",
       }),
       null,
       2
@@ -36,7 +46,7 @@ async function main() {
   console.log("\n--- Feynman ('explain it back to me') ---");
   console.log(
     JSON.stringify(
-      await generateFollowUp({ topic: "Photosynthesis", concept, stage: "open", useFeynman: true, priorQuestions: [] }),
+      await generateFollowUp({ topic: "Photosynthesis", concept, stage: "open", useFeynman: true, priorQuestions: [], difficulty: "beginner" }),
       null,
       2
     )

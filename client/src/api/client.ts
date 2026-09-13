@@ -1,4 +1,4 @@
-import type { OrchestratorResult, SessionState, UserSignal } from "../types";
+import type { Difficulty, OrchestratorResult, SessionState, UserSignal } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -14,10 +14,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function startSession(topic: string, customCriteria?: string) {
+export function startSession(topic: string, customCriteria: string | undefined, difficulty: Difficulty) {
   return request<OrchestratorResult>("/api/session", {
     method: "POST",
-    body: JSON.stringify({ topic, customCriteria: customCriteria || undefined }),
+    body: JSON.stringify({ topic, customCriteria: customCriteria || undefined, difficulty }),
   });
 }
 

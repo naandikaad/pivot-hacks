@@ -24,6 +24,10 @@ export const ConceptStatus = z.enum([
 ]);
 export type ConceptStatusT = z.infer<typeof ConceptStatus>;
 
+/** Chosen once at session setup; calibrates how easy/hard the generated rubric and follow-up questions are. */
+export const Difficulty = z.enum(["beginner", "advanced"]);
+export type DifficultyT = z.infer<typeof Difficulty>;
+
 /** Where a concept sits in the escalation ladder described in the product spec. */
 export const ConceptStage = z.enum([
   "initial", // not yet asked about directly
@@ -71,6 +75,7 @@ export interface SessionState {
   id: string;
   topic: string;
   rubricSource: "custom" | "generated";
+  difficulty: DifficultyT;
   createdAt: number;
   phase: SessionPhaseT;
   concepts: ConceptTrack[];

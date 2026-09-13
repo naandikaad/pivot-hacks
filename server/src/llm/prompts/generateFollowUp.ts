@@ -1,6 +1,6 @@
 import { callClaudeJSON } from "../client.js";
 import { FollowUpSchema, type FollowUpOutput } from "../schemas.js";
-import type { Concept } from "../../state/types.js";
+import type { Concept, DifficultyT } from "../../state/types.js";
 
 /**
  * Generates the next follow-up question for a concept that still has a gap.
@@ -20,6 +20,13 @@ Absolute rules:
 - Keep it to one short, natural, spoken sentence or two - this will be read aloud, not read on a page.
 - Treat this as "let's explore this together", not a test failure.`;
 
+const DIFFICULTY_INSTRUCTIONS: Record<DifficultyT, string> = {
+  beginner:
+    "Difficulty: BEGINNER. Keep the question simple and close to the concept's basic definition - a direct, concrete, easy-to-picture question. Avoid edge cases, exceptions, or multi-step reasoning.",
+  advanced:
+    "Difficulty: ADVANCED. Push further than the basics - ask about an edge case, an exception, a 'why' or 'under what conditions would that not hold', or how this concept interacts with a related one. Assume the user already has the fundamentals.",
+};
+
 export type FollowUpStage = "open" | "narrow";
 
 export interface GenerateFollowUpInput {
@@ -28,18 +35,21 @@ export interface GenerateFollowUpInput {
   stage: FollowUpStage;
   useFeynman: boolean;
   priorQuestions: string[];
+  difficulty: DifficultyT;
 }
 
-export function buildFollowUpPrompt({ topic, concept, stage, useFeynman, priorQuestions }: GenerateFollowUpInput): string {
+export function buildFollowUpPrompt({ topic, concept, stage, useFeynman, priorQuestions, difficulty }: GenerateFollowUpInput): string {
   const history =
     priorQuestions.length > 0
       ? `Questions already asked about this concept this session (do NOT repeat any of these, ask something meaningfully different):\n${priorQuestions.map((q) => `- ${q}`).join("\n")}`
       : `This is the first question about this concept this session.`;
+  const difficultyNote = DIFFICULTY_INSTRUCTIONS[difficulty];
 
   if (useFeynman) {
     return [
       `Topic: ${topic}`,
       `Concept: ${concept.label} - ${concept.description}`,
+      difficultyNote,
       concept.isReview ? `Note: this concept is a review item from a previous session; frame it conversationally, not as "you got this wrong before".` : "",
       history,
       ``,
@@ -57,6 +67,7 @@ export function buildFollowUpPrompt({ topic, concept, stage, useFeynman, priorQu
   return [
     `Topic: ${topic}`,
     `Concept: ${concept.label} - ${concept.description}`,
+    difficultyNote,
     concept.isReview ? `Note: this concept is a review item from a previous session; frame it conversationally, as a natural part of the conversation, not as a called-out weak spot.` : "",
     history,
     ``,

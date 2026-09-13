@@ -6,6 +6,8 @@ export type ConceptStatus = "unconfirmed" | "confirmed" | "partial" | "missing" 
 
 export type ConceptStage = "initial" | "open" | "narrow" | "hint1" | "hint2" | "hint3" | "resolved" | "gave-up";
 
+export type Difficulty = "beginner" | "advanced";
+
 export interface Concept {
   id: string;
   label: string;
@@ -36,6 +38,7 @@ export interface SessionState {
   id: string;
   topic: string;
   rubricSource: "custom" | "generated";
+  difficulty: Difficulty;
   createdAt: number;
   phase: SessionPhase;
   concepts: ConceptTrack[];

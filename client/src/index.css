@@ -74,6 +74,58 @@ body {
   font-weight: normal;
 }
 
+.difficulty-picker {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.difficulty-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.difficulty-option.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+
+.difficulty-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.difficulty-desc {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.difficulty-badge {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-weight: normal;
+}
+
+.difficulty-badge.advanced {
+  color: var(--partial);
+  border-color: var(--partial);
+}
+
 .topic-setup input,
 .topic-setup textarea,
 .typed-fallback input {

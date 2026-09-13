@@ -5,6 +5,7 @@ import type {
   ConceptStatusT,
   ConceptTrack,
   ConceptTrackEntry,
+  DifficultyT,
   SessionState,
 } from "./types.js";
 
@@ -22,12 +23,14 @@ const HINT_LADDER: ConceptStageT[] = ["open", "narrow", "hint1", "hint2", "hint3
 export function createSession(
   topic: string,
   concepts: Concept[],
-  rubricSource: "custom" | "generated"
+  rubricSource: "custom" | "generated",
+  difficulty: DifficultyT
 ): SessionState {
   return {
     id: nanoid(),
     topic,
     rubricSource,
+    difficulty,
     createdAt: Date.now(),
     phase: "opening",
     concepts: concepts.map((concept) => ({
