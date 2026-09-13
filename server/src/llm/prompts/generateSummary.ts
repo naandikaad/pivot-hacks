@@ -1,4 +1,4 @@
-import { callClaudeJSON } from "../client.js";
+import { callGeminiJSON } from "../client.js";
 import { SummarySchema, type SummaryOutput } from "../schemas.js";
 import type { ConceptTrack } from "../../state/types.js";
 
@@ -46,7 +46,7 @@ export function buildSummaryPrompt({ topic, concepts }: GenerateSummaryInput): s
 }
 
 export async function generateSummary(input: GenerateSummaryInput): Promise<SummaryOutput> {
-  return callClaudeJSON({
+  return callGeminiJSON({
     system: SYSTEM,
     prompt: buildSummaryPrompt(input),
     schema: SummarySchema,

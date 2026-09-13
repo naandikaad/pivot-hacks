@@ -1,4 +1,4 @@
-import { callClaudeJSON } from "../client.js";
+import { callGeminiJSON } from "../client.js";
 import { RubricSchema, type RubricOutput } from "../schemas.js";
 
 /**
@@ -42,7 +42,7 @@ export function buildParseRubricPrompt({ topic, customCriteria }: ParseRubricInp
 }
 
 export async function parseRubric(input: ParseRubricInput): Promise<RubricOutput> {
-  return callClaudeJSON({
+  return callGeminiJSON({
     system: SYSTEM,
     prompt: buildParseRubricPrompt(input),
     schema: RubricSchema,

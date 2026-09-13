@@ -1,4 +1,4 @@
-import { callClaudeJSON } from "../client.js";
+import { callGeminiJSON } from "../client.js";
 import { HintSchema, type HintOutput } from "../schemas.js";
 import type { Concept, ConceptTrackEntry } from "../../state/types.js";
 
@@ -41,7 +41,7 @@ export function buildHintPrompt({ topic, concept, hintLevel, history }: Generate
 }
 
 export async function generateHint(input: GenerateHintInput): Promise<HintOutput> {
-  return callClaudeJSON({
+  return callGeminiJSON({
     system: SYSTEM,
     prompt: buildHintPrompt(input),
     schema: HintSchema,

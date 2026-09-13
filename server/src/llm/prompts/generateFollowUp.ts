@@ -1,4 +1,4 @@
-import { callClaudeJSON } from "../client.js";
+import { callGeminiJSON } from "../client.js";
 import { FollowUpSchema, type FollowUpOutput } from "../schemas.js";
 import type { Concept } from "../../state/types.js";
 
@@ -67,7 +67,7 @@ export function buildFollowUpPrompt({ topic, concept, stage, useFeynman, priorQu
 }
 
 export async function generateFollowUp(input: GenerateFollowUpInput): Promise<FollowUpOutput> {
-  return callClaudeJSON({
+  return callGeminiJSON({
     system: SYSTEM,
     prompt: buildFollowUpPrompt(input),
     schema: FollowUpSchema,

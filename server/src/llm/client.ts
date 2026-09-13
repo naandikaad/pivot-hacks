@@ -1,9 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import type { z } from "zod";
 
-const client = new Anthropic();
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5";
+export const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 
 export interface LLMCallOptions {
   system: string;
@@ -12,15 +12,16 @@ export interface LLMCallOptions {
 }
 
 /** Plain-text completion, used only where no structured output is needed. */
-export async function callClaude({ system, prompt, maxTokens = 1024 }: LLMCallOptions): Promise<string> {
-  const response = await client.messages.create({
+export async function callGemini({ system, prompt, maxTokens = 1024 }: LLMCallOptions): Promise<string> {
+  const response = await client.models.generateContent({
     model: MODEL,
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: "user", content: prompt }],
+    contents: prompt,
+    config: {
+      systemInstruction: system,
+      maxOutputTokens: maxTokens,
+    },
   });
-  const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-  return textBlock?.text ?? "";
+  return response.text ?? "";
 }
 
 export interface LLMJSONCallOptions<T> extends LLMCallOptions {
@@ -33,7 +34,7 @@ export interface LLMJSONCallOptions<T> extends LLMCallOptions {
  * Every prompt template in ./prompts uses this so grading/question/hint/summary
  * output always arrives as typed data the state machine can consume directly.
  */
-export async function callClaudeJSON<T>({
+export async function callGeminiJSON<T>({
   system,
   prompt,
   schema,
@@ -42,14 +43,16 @@ export async function callClaudeJSON<T>({
   const jsonSystem = `${system}\n\nRespond with ONLY a single valid JSON object matching the requested shape. No markdown fences, no commentary before or after.`;
 
   const attempt = async (extra?: string): Promise<T> => {
-    const response = await client.messages.create({
+    const response = await client.models.generateContent({
       model: MODEL,
-      max_tokens: maxTokens,
-      system: jsonSystem,
-      messages: [{ role: "user", content: extra ? `${prompt}\n\n${extra}` : prompt }],
+      contents: extra ? `${prompt}\n\n${extra}` : prompt,
+      config: {
+        systemInstruction: jsonSystem,
+        maxOutputTokens: maxTokens,
+        responseMimeType: "application/json",
+      },
     });
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
-    const raw = (textBlock?.text ?? "").trim();
+    const raw = (response.text ?? "").trim();
     const jsonText = extractJson(raw);
     const parsed = JSON.parse(jsonText);
     return schema.parse(parsed);
