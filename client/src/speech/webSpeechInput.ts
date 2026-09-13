@@ -2,9 +2,10 @@ import type { SpeechInputProvider } from "./types";
 
 /**
  * Browser-native STT via the Web Speech API. Runs continuous recognition
- * with interim results streamed live for on-screen feedback, and treats a
- * period of silence after the last result as end-of-turn - a simple stand-in
- * for real voice-activity detection until a streaming provider is wired in.
+ * with interim results streamed live for on-screen feedback. A turn is only
+ * ever finalized and submitted explicitly via stopAndSubmit() (the "Stop &
+ * send" button) - there is no silence-timeout auto-submit, so a pause never
+ * sends an answer before the user is ready.
  */
 export class WebSpeechInput implements SpeechInputProvider {
   private recognition: SpeechRecognition | null = null;
@@ -12,15 +13,9 @@ export class WebSpeechInput implements SpeechInputProvider {
   private speechStartCb: (() => void) | null = null;
   private errorCb: ((message: string) => void) | null = null;
   private finalTranscript = "";
-  /** The most recent not-yet-final chunk, kept so a manual stop() can still submit it. */
+  /** The most recent not-yet-final chunk, kept so stopAndSubmit() can still submit it. */
   private lastInterim = "";
-  private silenceTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldRestart = false;
-  private readonly silenceMs: number;
-
-  constructor(silenceMs = 1400) {
-    this.silenceMs = silenceMs;
-  }
 
   isSupported(): boolean {
     return typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -46,7 +41,6 @@ export class WebSpeechInput implements SpeechInputProvider {
       }
       this.lastInterim = interim;
       this.resultCb?.(`${this.finalTranscript}${interim}`.trim(), false);
-      this.resetSilenceTimer();
     };
 
     recognition.onspeechstart = () => this.speechStartCb?.();
@@ -65,11 +59,6 @@ export class WebSpeechInput implements SpeechInputProvider {
     };
 
     return recognition;
-  }
-
-  private resetSilenceTimer() {
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
-    this.silenceTimer = setTimeout(() => this.finalizeTurn(), this.silenceMs);
   }
 
   private finalizeTurn() {
@@ -92,20 +81,16 @@ export class WebSpeechInput implements SpeechInputProvider {
 
   stop(): void {
     this.shouldRestart = false;
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
     this.recognition?.stop();
     this.recognition = null;
   }
 
   /**
-   * Stops recognition immediately and, unlike stop(), submits whatever has
-   * been heard so far - even a still-interim chunk that hasn't been
-   * finalized by the recognizer yet. Used when the user explicitly ends
-   * their turn (the "Stop listening" button) instead of waiting out the
-   * silence timeout.
+   * Stops recognition immediately and submits whatever has been heard so
+   * far - even a still-interim chunk that hasn't been finalized by the
+   * recognizer yet. This is the only way a turn ever gets submitted.
    */
   stopAndSubmit(): void {
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
     this.finalizeTurn();
     this.stop();
   }

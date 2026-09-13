@@ -72,8 +72,9 @@ framed conversationally rather than as a called-out past failure.
 rest of the app never talks to a specific engine. The bundled implementations
 (`webSpeechInput.ts`, `webSpeechOutput.ts`) use the browser's native Web Speech API:
 
-- Continuous recognition with streamed interim results; a period of silence after the last
-  result is treated as end-of-turn (a simple stand-in for real VAD).
+- Continuous recognition with streamed interim results shown live as the user talks; a turn is
+  only ever finalized and submitted by the explicit "Stop & send" button, never on a pause -
+  the user decides when they're done, not a timeout.
 - `useVoicePipeline` handles turn-taking: the mic is muted while the assistant is speaking and
   resumed automatically once playback ends.
 - A typed-text fallback is always available (unsupported browsers, noisy environments).

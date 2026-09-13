@@ -100,6 +100,14 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
           <button type="button" onClick={toggleVoice} disabled={!pipeline.supported}>
             {pipeline.speaking ? "⏹ Stop speaking" : voiceEnabled ? "🔊 Voice on" : "🔇 Voice off"}
           </button>
+          <button
+            type="button"
+            onClick={() => void pipeline.speak("This is a test of the assistant's voice.")}
+            disabled={!pipeline.supported || pipeline.speaking}
+            title="Speaks a short test phrase - use this to check your browser/OS can produce audio at all, independent of the AI"
+          >
+            🔈 Test voice
+          </button>
         </div>
 
         <TypedFallback disabled={!canRespondByVoice || busy} onSubmit={onUserUtterance} />

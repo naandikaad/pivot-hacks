@@ -1,15 +1,20 @@
 import type { SpeechOutputProvider } from "./types";
 
 /**
- * Browser-native TTS via the SpeechSynthesis API. Works around two
- * long-standing Chrome quirks that otherwise make the assistant silently
- * fail to speak with no error surfaced anywhere:
+ * Browser-native TTS via the SpeechSynthesis API. Works around several
+ * long-standing quirks that otherwise make the assistant silently fail to
+ * speak with no error surfaced anywhere:
  *  1. Calling speak() immediately after cancel() can get silently dropped -
  *     a short delay between them avoids it.
  *  2. speak() calls made asynchronously (e.g. after a fetch resolves, as
  *     every real prompt here is) can be silently ignored unless the engine
  *     was already "unlocked" by a speak() call made synchronously inside an
  *     earlier user gesture - see unlockSpeechSynthesis() below.
+ *  3. If the browser/OS has no TTS voices installed at all, some
+ *     implementations never fire onstart/onend/onerror for a speak() call -
+ *     without a timeout that hangs the whole conversation forever with zero
+ *     feedback. A safety-net timer guarantees this always resolves and
+ *     always reports something.
  */
 export class WebSpeechOutput implements SpeechOutputProvider {
   private speakingCb: ((speaking: boolean) => void) | null = null;
@@ -24,23 +29,45 @@ export class WebSpeechOutput implements SpeechOutputProvider {
     const synth = window.speechSynthesis;
 
     return new Promise((resolve) => {
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        this.speakingCb?.(false);
+        resolve();
+      };
+
       const startSpeaking = () => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
-        utterance.onstart = () => this.speakingCb?.(true);
-        const finish = () => {
-          this.speakingCb?.(false);
-          resolve();
+        const voice = pickVoice(synth);
+        if (voice) utterance.voice = voice;
+
+        let started = false;
+        utterance.onstart = () => {
+          started = true;
+          this.speakingCb?.(true);
         };
-        utterance.onend = finish;
+        utterance.onend = settle;
         utterance.onerror = (event) => {
-          // "canceled"/"interrupted" fire on our own cancel()/replace calls below - expected, not real errors.
+          // "canceled"/"interrupted" fire on our own cancel()/replace calls above - expected, not real errors.
           if (event.error !== "canceled" && event.error !== "interrupted") {
             this.errorCb?.(event.error);
           }
-          finish();
+          settle();
         };
+
         synth.speak(utterance);
+
+        // Safety net: some browsers/OSes silently never fire any event at all
+        // (most often because no TTS voice is installed) - guarantee we still
+        // report *something* and hand the turn back instead of hanging forever.
+        const timeoutMs = Math.max(8000, text.length * 100);
+        setTimeout(() => {
+          if (settled) return;
+          if (!started) this.errorCb?.("speech synthesis timed out - no voice available?");
+          settle();
+        }, timeoutMs);
       };
 
       if (synth.speaking || synth.pending) {
@@ -66,6 +93,12 @@ export class WebSpeechOutput implements SpeechOutputProvider {
   onError(cb: (message: string) => void): void {
     this.errorCb = cb;
   }
+}
+
+function pickVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
+  const voices = synth.getVoices();
+  if (voices.length === 0) return null;
+  return voices.find((v) => v.lang?.startsWith("en") && v.default) ?? voices.find((v) => v.lang?.startsWith("en")) ?? voices[0];
 }
 
 /**

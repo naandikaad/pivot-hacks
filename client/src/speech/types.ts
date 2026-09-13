@@ -11,9 +11,9 @@ export interface SpeechInputProvider {
   start(): void;
   /** Stops recognition without submitting whatever's been heard so far (e.g. muting for TTS playback). */
   stop(): void;
-  /** Stops recognition and submits whatever's been heard so far, even if not yet finalized by silence. */
+  /** Stops recognition and submits whatever's been heard so far - the only way a turn is ever finalized. */
   stopAndSubmit(): void;
-  /** Fires on every recognition update; `isFinal` marks end-of-turn (silence detected, or a manual stopAndSubmit()). */
+  /** Fires on every recognition update; `isFinal` is only ever true after a stopAndSubmit() call. */
   onResult(cb: (text: string, isFinal: boolean) => void): void;
   /** Fires when the engine detects the user has started talking (used to interrupt playback). */
   onSpeechStart(cb: () => void): void;
