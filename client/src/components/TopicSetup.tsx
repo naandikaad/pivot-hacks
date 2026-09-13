@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { unlockSpeechSynthesis } from "../speech/webSpeechOutput";
-import { unlockAudioPlayback } from "../speech/serverTtsOutput";
 import type { Difficulty } from "../types";
 
 export interface TopicSetupProps {
@@ -19,17 +17,6 @@ export function TopicSetup({ onStart, busy }: TopicSetupProps) {
       onSubmit={(e) => {
         e.preventDefault();
         if (topic.trim()) {
-          // Must happen synchronously inside this click handler - browsers
-          // only reliably allow audio playback triggered later from async
-          // code (e.g. after a fetch resolves, as every real TTS call here
-          // is) once it's been "unlocked" by real playback during a genuine
-          // user gesture like this one. unlockAudioPlayback() is for the
-          // active ServerTtsOutput (Google Cloud TTS / ElevenLabs, whichever
-          // the server is configured for); unlockSpeechSynthesis() is kept
-          // too in case useVoicePipeline's createOutput is ever swapped back
-          // to WebSpeechOutput.
-          unlockAudioPlayback();
-          unlockSpeechSynthesis();
           onStart(topic.trim(), customCriteria.trim(), difficulty);
         }
       }}

@@ -15,40 +15,25 @@ export interface ConversationProps {
 }
 
 export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtterance, onSignal, onExitCheck }: ConversationProps) {
-  const lastSpokenRef = useRef<string | null>(null);
+  const lastPromptRef = useRef<string | null>(null);
   const pipeline = useVoicePipeline({ onFinalTranscript: onUserUtterance });
 
-  // User-controlled intent, independent of the pipeline's own auto mute/resume
-  // around TTS playback - a manual mic toggle would otherwise get silently
-  // undone the next time the assistant finishes speaking.
+  // User-controlled mic intent - a manual mute stays muted across turns
+  // rather than being silently re-enabled the next time a prompt arrives.
   const [micEnabled, setMicEnabled] = useState(true);
-  const micEnabledRef = useRef(micEnabled);
-  micEnabledRef.current = micEnabled;
-
-  // Whether the assistant is allowed to speak its responses aloud at all.
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   useEffect(() => {
-    if (!prompt || prompt === lastSpokenRef.current) return;
-    lastSpokenRef.current = prompt;
-    if (voiceEnabled) {
-      void pipeline.speak(prompt).then(() => {
-        if (!micEnabledRef.current) pipeline.stopListening();
-      });
-    } else if (micEnabledRef.current) {
-      pipeline.startListening();
-    }
-    // pipeline methods are stable across renders (see useVoicePipeline), safe to omit
+    if (!prompt || prompt === lastPromptRef.current) return;
+    lastPromptRef.current = prompt;
+    if (micEnabled) pipeline.startListening();
+    // pipeline.startListening is stable across renders (see useVoicePipeline), safe to omit
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt, voiceEnabled]);
+  }, [prompt, micEnabled]);
 
   const activeConcept = session.activeConceptIndex !== null ? session.concepts[session.activeConceptIndex] : null;
   const canRespondByVoice = session.phase === "opening" || session.phase === "followup";
   const isExitCheck = session.phase === "exit-check";
 
-  // Plain reads + a single side effect per click, rather than doing the side
-  // effect inside a setState updater function - React can invoke updaters
-  // more than once (e.g. StrictMode), which would double-submit an answer.
   function toggleMic() {
     const next = !micEnabled;
     setMicEnabled(next);
@@ -63,12 +48,6 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
     }
   }
 
-  function toggleVoice() {
-    const next = !voiceEnabled;
-    setVoiceEnabled(next);
-    if (!next) pipeline.cancelSpeaking(); // interrupt immediately when turned off
-  }
-
   return (
     <div className="conversation">
       <div className="conversation-main">
@@ -77,9 +56,7 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
         </h1>
 
         {!pipeline.supported && (
-          <p className="warn">
-            Speech recognition/synthesis isn't supported in this browser. Try Chrome or Edge, or type your answer below.
-          </p>
+          <p className="warn">Speech recognition isn't supported in this browser. Try Chrome or Edge, or type your answer below.</p>
         )}
 
         <TranscriptLog
@@ -88,27 +65,14 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
         />
 
         <div className="mic-status">
-          {pipeline.speaking && <span className="status-chip speaking">Speaking…</span>}
-          {!pipeline.speaking && pipeline.listening && <span className="status-chip listening">Listening…</span>}
+          {pipeline.listening && <span className="status-chip listening">Listening…</span>}
           {pipeline.micError && <span className="status-chip warn">Mic error: {pipeline.micError}</span>}
-          {pipeline.speechError && <span className="status-chip warn">Voice error: {pipeline.speechError}</span>}
           {busy && <span className="status-chip busy">Thinking…</span>}
         </div>
 
         <div className="voice-controls">
           <button type="button" onClick={toggleMic} disabled={!pipeline.supported}>
             {micEnabled ? (canRespondByVoice ? "🎤 Stop & send" : "🎤 Stop listening") : "🎤 Start listening"}
-          </button>
-          <button type="button" onClick={toggleVoice} disabled={!pipeline.supported}>
-            {pipeline.speaking ? "⏹ Stop speaking" : voiceEnabled ? "🔊 Voice on" : "🔇 Voice off"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void pipeline.speak("This is a test of the assistant's voice.")}
-            disabled={!pipeline.supported || pipeline.speaking}
-            title="Speaks a short test phrase - use this to check your browser/OS can produce audio at all, independent of the AI"
-          >
-            🔈 Test voice
           </button>
         </div>
 

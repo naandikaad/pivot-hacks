@@ -1,53 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebSpeechInput } from "./webSpeechInput";
-import { ServerTtsOutput } from "./serverTtsOutput";
-import type { SpeechInputProvider, SpeechOutputProvider } from "./types";
+import type { SpeechInputProvider } from "./types";
 
 export interface UseVoicePipelineOptions {
   onFinalTranscript: (text: string) => void;
-  /** Swap in a different STT/TTS implementation (e.g. a streaming provider) without touching callers. */
+  /** Swap in a different STT implementation (e.g. a streaming provider) without touching callers. */
   createInput?: () => SpeechInputProvider;
-  createOutput?: () => SpeechOutputProvider;
 }
 
 export interface VoicePipeline {
   supported: boolean;
   listening: boolean;
-  speaking: boolean;
   interimText: string;
   micError: string | null;
-  /** A real TTS failure (not our own cancels/interrupts), e.g. the browser blocking synthesis. */
-  speechError: string | null;
-  /** Speaks text, muting the mic first and resuming listening once done (natural turn-taking). */
-  speak: (text: string) => Promise<void>;
-  /** Interrupts any in-progress speech immediately and hands the turn back to the mic. */
-  cancelSpeaking: () => void;
   startListening: () => void;
-  /** Mutes the mic without submitting anything (used internally while the assistant speaks). */
+  /** Mutes the mic without submitting anything. */
   stopListening: () => void;
   /** Ends the user's turn immediately, submitting whatever's been heard so far as their answer. */
   stopListeningAndSubmit: () => void;
 }
 
-export function useVoicePipeline({ onFinalTranscript, createInput, createOutput }: UseVoicePipelineOptions): VoicePipeline {
+export function useVoicePipeline({ onFinalTranscript, createInput }: UseVoicePipelineOptions): VoicePipeline {
   const inputRef = useRef<SpeechInputProvider | null>(null);
-  const outputRef = useRef<SpeechOutputProvider | null>(null);
   const onFinalTranscriptRef = useRef(onFinalTranscript);
   onFinalTranscriptRef.current = onFinalTranscript;
 
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
-  const [speechError, setSpeechError] = useState<string | null>(null);
 
   useEffect(() => {
     const input = createInput ? createInput() : new WebSpeechInput();
-    const output = createOutput ? createOutput() : new ServerTtsOutput();
     inputRef.current = input;
-    outputRef.current = output;
-    setSupported(input.isSupported() && output.isSupported());
+    setSupported(input.isSupported());
 
     input.onResult((text, isFinal) => {
       if (isFinal) {
@@ -58,12 +44,9 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
       }
     });
     input.onError((message) => setMicError(message));
-    output.onSpeakingChange(setSpeaking);
-    output.onError((message) => setSpeechError(message));
 
     return () => {
       input.stop();
-      output.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -85,31 +68,11 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     setListening(false);
   }, []);
 
-  const speak = useCallback(
-    async (text: string) => {
-      setSpeechError(null);
-      stopListening(); // mute the mic while the assistant talks, avoids self-transcription
-      await outputRef.current?.speak(text);
-      startListening(); // hand the turn back to the user
-    },
-    [startListening, stopListening]
-  );
-
-  const cancelSpeaking = useCallback(() => {
-    // Triggers the output's onSpeakingChange(false) and resolves the pending
-    // speak() promise, which itself calls startListening() - no need to duplicate that here.
-    outputRef.current?.cancel();
-  }, []);
-
   return {
     supported,
     listening,
-    speaking,
     interimText,
     micError,
-    speechError,
-    speak,
-    cancelSpeaking,
     startListening,
     stopListening,
     stopListeningAndSubmit,

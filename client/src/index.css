@@ -240,10 +240,6 @@ button:not(:disabled):hover {
   border: 1px solid var(--border);
 }
 
-.status-chip.speaking {
-  color: var(--accent);
-}
-
 .status-chip.listening {
   color: var(--confirmed);
 }

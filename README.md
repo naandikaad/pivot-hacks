@@ -71,28 +71,20 @@ framed conversationally rather than as a called-out past failure.
 
 ### Voice pipeline
 
-`client/src/speech/` defines `SpeechInputProvider` / `SpeechOutputProvider` interfaces so the
-rest of the app never talks to a specific engine:
+The user's side of the conversation is voice; the assistant's is text-only - it never speaks
+back, only replies in the transcript. `client/src/speech/webSpeechInput.ts` implements a
+`SpeechInputProvider` interface (`client/src/speech/types.ts`) so the rest of the app never talks
+to a specific STT engine directly:
 
-- **Input (STT)**: `webSpeechInput.ts` uses the browser's native Web Speech API. Continuous
-  recognition with streamed interim results shown live as the user talks; a turn is only ever
-  finalized and submitted by the explicit "Stop & send" button, never on a pause - the user
-  decides when they're done, not a timeout.
-- **Output (TTS)**: `serverTtsOutput.ts` calls the server's `/api/tts` proxy
-  (`server/src/routes/tts.ts`), which dispatches to a swappable `TtsProvider`
-  (`server/src/tts/`) - **Google Cloud TTS by default** (a generous free tier), or **ElevenLabs**
-  by setting `TTS_PROVIDER=elevenlabs`. Either way the API key never reaches the browser, and the
-  client doesn't know or care which is active. A safety-net timeout (scaled to text length)
-  guarantees a stuck request/playback can never hang the conversation forever, and real failures
-  surface as a visible "Voice error" instead of silently doing nothing. `webSpeechOutput.ts` (the
-  original browser-native TTS implementation) is still in the codebase, fully working, and a
-  one-line swap away in `useVoicePipeline.ts` if you ever want to go back to it.
-- `useVoicePipeline` handles turn-taking: the mic is muted while the assistant is speaking and
-  resumed automatically once playback ends.
+- Uses the browser's native Web Speech API - continuous recognition with streamed interim
+  results shown live as the user talks.
+- A turn is only ever finalized and submitted by the explicit "Stop & send" button, never on a
+  pause - the user decides when they're done, not a timeout.
+- The mic toggle button remembers the user's own on/off intent across turns.
 - A typed-text fallback is always available (unsupported browsers, noisy environments).
 
-Swap in a different provider (Deepgram, Google Cloud TTS, etc.) by implementing the two
-interfaces - no other file needs to change.
+Swap in a different STT provider (Deepgram, etc.) by implementing `SpeechInputProvider` - no
+other file needs to change.
 
 ## Running it
 
@@ -103,15 +95,14 @@ npm install
 
 # terminal 1
 export ANTHROPIC_API_KEY=sk-ant-...
-export GOOGLE_TTS_API_KEY=...     # Google Cloud Console, with the Text-to-Speech API enabled - required for the assistant to speak
 npm run dev:server        # http://localhost:8787
 
 # terminal 2
 npm run dev:client        # http://localhost:5173
 ```
 
-Speech recognition/synthesis require a Chromium-based browser (Chrome/Edge) - Safari and
-Firefox support is inconsistent, and the app falls back to a typed-text input automatically.
+Speech recognition works best in a Chromium-based browser (Chrome/Edge) - Safari and Firefox
+support is inconsistent, and the app falls back to a typed-text input automatically.
 
 ### Testing
 
@@ -133,7 +124,7 @@ GitHub Pages only serves static files, so it can host `client/` but **not** `ser
 two need to be deployed separately:
 
 1. **Server**: deploy `server/` to any Node host (Render, Fly.io, Railway, a VPS, ...) with
-   `ANTHROPIC_API_KEY` and `GOOGLE_TTS_API_KEY` set, and note its public URL.
+   `ANTHROPIC_API_KEY` set, and note its public URL.
 2. **Client**: `.github/workflows/deploy-pages.yml` builds `client/` and publishes it to GitHub
    Pages automatically on push. Before it'll work:
    - In the repo's **Settings -> Pages**, set **Source** to **GitHub Actions** (not "Deploy from
