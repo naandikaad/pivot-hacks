@@ -26,4 +26,6 @@ export interface SpeechOutputProvider {
   speak(text: string): Promise<void>;
   cancel(): void;
   onSpeakingChange(cb: (speaking: boolean) => void): void;
+  /** Fires on a real synthesis failure (not on our own cancel()/interrupt calls). */
+  onError(cb: (message: string) => void): void;
 }

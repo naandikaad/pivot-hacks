@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { unlockSpeechSynthesis } from "../speech/webSpeechOutput";
 
 export interface TopicSetupProps {
   onStart: (topic: string, customCriteria: string) => void;
@@ -14,7 +15,13 @@ export function TopicSetup({ onStart, busy }: TopicSetupProps) {
       className="topic-setup"
       onSubmit={(e) => {
         e.preventDefault();
-        if (topic.trim()) onStart(topic.trim(), customCriteria.trim());
+        if (topic.trim()) {
+          // Must happen synchronously inside this click handler - Chrome only
+          // reliably allows speech synthesis when the first speak() call is
+          // tied to a user gesture like this one, not a later async prompt.
+          unlockSpeechSynthesis();
+          onStart(topic.trim(), customCriteria.trim());
+        }
       }}
     >
       <h1>Voice Knowledge Tester</h1>

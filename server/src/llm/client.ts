@@ -3,7 +3,11 @@ import type { z } from "zod";
 
 const client = new Anthropic();
 
-export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5";
+// Sonnet 5 over Opus 5: grading/question/hint generation here are short,
+// well-specified classification/generation tasks, not deep reasoning, so the
+// latency/cost win is worth more than Opus's extra headroom for this app.
+// Override with ANTHROPIC_MODEL if you want Opus's quality back.
+export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
 export interface LLMCallOptions {
   system: string;

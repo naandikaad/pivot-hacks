@@ -89,6 +89,7 @@ export function Conversation({ session, prompt, pendingConcepts, busy, onUserUtt
           {pipeline.speaking && <span className="status-chip speaking">Speaking…</span>}
           {!pipeline.speaking && pipeline.listening && <span className="status-chip listening">Listening…</span>}
           {pipeline.micError && <span className="status-chip warn">Mic error: {pipeline.micError}</span>}
+          {pipeline.speechError && <span className="status-chip warn">Voice error: {pipeline.speechError}</span>}
           {busy && <span className="status-chip busy">Thinking…</span>}
         </div>
 

@@ -16,6 +16,8 @@ export interface VoicePipeline {
   speaking: boolean;
   interimText: string;
   micError: string | null;
+  /** A real TTS failure (not our own cancels/interrupts), e.g. the browser blocking synthesis. */
+  speechError: string | null;
   /** Speaks text, muting the mic first and resuming listening once done (natural turn-taking). */
   speak: (text: string) => Promise<void>;
   /** Interrupts any in-progress speech immediately and hands the turn back to the mic. */
@@ -38,6 +40,7 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
   const [speaking, setSpeaking] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
+  const [speechError, setSpeechError] = useState<string | null>(null);
 
   useEffect(() => {
     const input = createInput ? createInput() : new WebSpeechInput();
@@ -56,6 +59,7 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     });
     input.onError((message) => setMicError(message));
     output.onSpeakingChange(setSpeaking);
+    output.onError((message) => setSpeechError(message));
 
     return () => {
       input.stop();
@@ -83,6 +87,7 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
 
   const speak = useCallback(
     async (text: string) => {
+      setSpeechError(null);
       stopListening(); // mute the mic while the assistant talks, avoids self-transcription
       await outputRef.current?.speak(text);
       startListening(); // hand the turn back to the user
@@ -102,6 +107,7 @@ export function useVoicePipeline({ onFinalTranscript, createInput, createOutput 
     speaking,
     interimText,
     micError,
+    speechError,
     speak,
     cancelSpeaking,
     startListening,
