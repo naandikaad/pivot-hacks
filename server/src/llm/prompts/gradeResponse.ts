@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { callGeminiJSON } from "../client.js";
+import { callClaudeJSON } from "../client.js";
 import { GradingResultSchema, type GradingResult } from "../schemas.js";
 import { ConceptStatus, type Concept } from "../../state/types.js";
 
@@ -43,7 +43,7 @@ export function buildGradeInitialPrompt({ topic, concepts, userExplanation }: Gr
 }
 
 export async function gradeInitialExplanation(input: GradeInitialInput): Promise<GradingResult> {
-  return callGeminiJSON({
+  return callClaudeJSON({
     system: SYSTEM,
     prompt: buildGradeInitialPrompt(input),
     schema: GradingResultSchema,
@@ -80,7 +80,7 @@ export function buildGradeFollowUpPrompt({ topic, concept, questionAsked, userAn
 }
 
 export async function gradeFollowUpAnswer(input: GradeFollowUpInput): Promise<FollowUpGrade> {
-  return callGeminiJSON({
+  return callClaudeJSON({
     system: SYSTEM,
     prompt: buildGradeFollowUpPrompt(input),
     schema: FollowUpGradeSchema,

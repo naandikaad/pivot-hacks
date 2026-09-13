@@ -45,7 +45,7 @@ feeds their output back into the state machine - it's the only place the two are
 ### LLM prompt templates
 
 Five separate templates under `server/src/llm/prompts/`, each independently testable via
-`npm run manual:<name> --workspace server` (requires `GEMINI_API_KEY`):
+`npm run manual:<name> --workspace server` (requires `ANTHROPIC_API_KEY`):
 
 | Template | File | Purpose |
 |---|---|---|
@@ -56,7 +56,7 @@ Five separate templates under `server/src/llm/prompts/`, each independently test
 | (e) Study summary | `generateSummary.ts` | The one place direct language is used - explains *why* each gap was flagged, tied to what the user actually said |
 
 All five validate their output against a zod schema (`server/src/llm/schemas.ts`) via
-`callGeminiJSON`, which retries once if the model's JSON doesn't parse/validate.
+`callClaudeJSON`, which retries once if the model's JSON doesn't parse/validate.
 
 ### Spaced repetition
 
@@ -89,7 +89,7 @@ Requires Node 20+.
 npm install
 
 # terminal 1
-export GEMINI_API_KEY=AIza...        # from Google AI Studio (aistudio.google.com/apikey)
+export ANTHROPIC_API_KEY=sk-ant-...
 npm run dev:server        # http://localhost:8787
 
 # terminal 2
@@ -110,5 +110,5 @@ npm run manual:hint --workspace server
 npm run manual:summary --workspace server
 ```
 
-The manual scripts call the real Gemini API and print the raw JSON output, so each prompt
+The manual scripts call the real Anthropic API and print the raw JSON output, so each prompt
 template can be tuned and verified independently of the full conversation flow.
