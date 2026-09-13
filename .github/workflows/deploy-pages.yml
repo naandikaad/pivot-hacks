@@ -1,0 +1,63 @@
+name: Deploy client to GitHub Pages
+
+# This app is two workspaces: an Express server (server/) and a Vite/React
+# client (client/). GitHub Pages can only host static files, so this
+# workflow builds and publishes ONLY the client - the server has to be
+# deployed separately (Render, Fly.io, Railway, etc.), and its public URL
+# needs to be set as the VITE_API_URL repository variable below so the
+# built client actually knows where to send API requests.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/voice-knowledge-testing-app-rzwbx6
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build client
+        # VITE_API_URL is inlined into the built JS at build time (Vite env
+        # vars can't be changed after the fact) - set it under
+        # Settings -> Secrets and variables -> Actions -> Variables once the
+        # server is deployed somewhere reachable. Falls back to localhost,
+        # which only works if you're previewing the build on your own machine.
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npm run build --workspace client
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -114,3 +114,22 @@ npm run manual:summary --workspace server
 
 The manual scripts call the real Anthropic API and print the raw JSON output, so each prompt
 template can be tuned and verified independently of the full conversation flow.
+
+## Deploying
+
+GitHub Pages only serves static files, so it can host `client/` but **not** `server/` - the
+two need to be deployed separately:
+
+1. **Server**: deploy `server/` to any Node host (Render, Fly.io, Railway, a VPS, ...) with
+   `ANTHROPIC_API_KEY` set, and note its public URL.
+2. **Client**: `.github/workflows/deploy-pages.yml` builds `client/` and publishes it to GitHub
+   Pages automatically on push. Before it'll work:
+   - In the repo's **Settings -> Pages**, set **Source** to **GitHub Actions** (not "Deploy from
+     a branch" - that would serve raw, unbuilt source files and just show a blank page).
+   - In **Settings -> Secrets and variables -> Actions -> Variables**, add a repository variable
+     named `VITE_API_URL` set to the server's public URL from step 1. This gets inlined into the
+     client bundle at build time - Vite env vars can't be changed after the fact, so redeploy the
+     client (re-run the workflow) any time this changes.
+
+`client/vite.config.ts` uses a relative `base: "./"` so the build works from whatever subpath
+GitHub Pages serves a project site from, with no extra configuration needed.
