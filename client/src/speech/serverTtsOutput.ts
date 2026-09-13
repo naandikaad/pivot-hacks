@@ -30,15 +30,16 @@ export function unlockAudioPlayback(): void {
 }
 
 /**
- * TTS via ElevenLabs, proxied through this app's server (POST /api/tts) so
- * the ElevenLabs API key never reaches the browser. Implements the same
- * SpeechOutputProvider interface as WebSpeechOutput, so it's a drop-in swap -
- * see useVoicePipeline's createOutput option. Carries over the same
- * hardening: a safety-net timeout so a stuck request/playback can never hang
- * the conversation forever, and real errors surfaced via onError rather than
- * swallowed.
+ * TTS via the server's /api/tts proxy (server/src/routes/tts.ts), which can
+ * be backed by Google Cloud TTS, ElevenLabs, or another provider entirely
+ * depending on server config (TTS_PROVIDER) - this class doesn't need to
+ * know or care which. Implements the same SpeechOutputProvider interface as
+ * WebSpeechOutput, so it's a drop-in swap - see useVoicePipeline's
+ * createOutput option. Carries over the same hardening: a safety-net timeout
+ * so a stuck request/playback can never hang the conversation forever, and
+ * real errors surfaced via onError rather than swallowed.
  */
-export class ElevenLabsOutput implements SpeechOutputProvider {
+export class ServerTtsOutput implements SpeechOutputProvider {
   private audio = sharedAudio ?? new Audio();
   private speakingCb: ((speaking: boolean) => void) | null = null;
   private errorCb: ((message: string) => void) | null = null;
@@ -71,7 +72,7 @@ export class ElevenLabsOutput implements SpeechOutputProvider {
       const timeoutMs = Math.max(10000, text.length * 120);
       const timer = setTimeout(() => {
         if (settled) return;
-        this.errorCb?.("ElevenLabs TTS timed out");
+        this.errorCb?.("TTS request timed out");
         settle();
       }, timeoutMs);
 

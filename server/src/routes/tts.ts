@@ -1,55 +1,40 @@
 import { Router } from "express";
 import { z } from "zod";
+import { googleTtsProvider } from "../tts/googleTtsProvider.js";
+import { elevenLabsProvider } from "../tts/elevenLabsProvider.js";
+import { TtsConfigError, TtsUpstreamError, type TtsProvider } from "../tts/types.js";
 
 export const ttsRouter = Router();
 
 const TtsSchema = z.object({ text: z.string().min(1).max(2000) });
 
-// "Rachel" - a stock ElevenLabs premade voice, used as a sane default so the
-// app works out of the box; override with ELEVENLABS_VOICE_ID.
-const VOICE_ID = process.env.ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM";
-// Flash is ElevenLabs' lowest-latency model (~75ms) - matches this app's
-// real-time conversation use case better than the higher-quality/slower
-// models. Override with ELEVENLABS_MODEL_ID if quality matters more here.
-const MODEL_ID = process.env.ELEVENLABS_MODEL_ID ?? "eleven_flash_v2_5";
+const PROVIDERS: Record<string, TtsProvider> = {
+  google: googleTtsProvider,
+  elevenlabs: elevenLabsProvider,
+};
 
-/**
- * Proxies text-to-speech through ElevenLabs so the API key never reaches the
- * browser. Buffers the full response before replying (simpler and more
- * robust than piping a stream through Express) - fine for the short,
- * one-or-two-sentence utterances this app ever sends.
- */
+// Google Cloud TTS is the default - it has a generous free tier, unlike
+// ElevenLabs which is paid from the first request. Set
+// TTS_PROVIDER=elevenlabs (plus ELEVENLABS_API_KEY) to switch back; both
+// providers speak the exact same {audio, contentType} contract, so nothing
+// else in the app needs to change either way.
+const PROVIDER_NAME = (process.env.TTS_PROVIDER ?? "google").toLowerCase();
+const provider = PROVIDERS[PROVIDER_NAME];
+
 ttsRouter.post("/", async (req, res, next) => {
   try {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return res.status(503).json({ error: "ELEVENLABS_API_KEY is not configured on the server" });
+    if (!provider) {
+      return res
+        .status(500)
+        .json({ error: `Unknown TTS_PROVIDER "${PROVIDER_NAME}" - expected one of: ${Object.keys(PROVIDERS).join(", ")}` });
     }
     const { text } = TtsSchema.parse(req.body);
-
-    const upstream = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-        Accept: "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: MODEL_ID,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-      }),
-    });
-
-    if (!upstream.ok) {
-      const detail = await upstream.text().catch(() => "");
-      return res.status(upstream.status || 502).json({ error: `ElevenLabs TTS request failed: ${detail || upstream.statusText}` });
-    }
-
-    const audio = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader("Content-Type", upstream.headers.get("content-type") ?? "audio/mpeg");
+    const { audio, contentType } = await provider.synthesize(text);
+    res.setHeader("Content-Type", contentType);
     res.send(audio);
   } catch (err) {
+    if (err instanceof TtsConfigError) return res.status(503).json({ error: err.message });
+    if (err instanceof TtsUpstreamError) return res.status(502).json({ error: err.message });
     next(err);
   }
 });
