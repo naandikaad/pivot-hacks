@@ -1,9 +1,9 @@
 # Voice Knowledge Tester
 
 A voice-based Socratic knowledge tester. You pick a topic and a difficulty (beginner or
-advanced - calibrates both the generated rubric and the follow-up questions), optionally
-pasting your own rubric, explain what you know out loud, and the app asks gentle follow-up
-questions to surface gaps and misconceptions - without ever telling you you're wrong. It ends
+advanced); the tester calibrates both the generated rubric and the follow-up questions. You can optionally
+paste your own rubric, explain what you know out loud, and the app asks gentle follow-up
+questions to surface gaps and misconceptions without telling you you're wrong. It ends
 with a private study summary that explains *why* each gap was flagged.
 
 ## Architecture
@@ -21,7 +21,7 @@ server backed by a different LLM).
 
 ### Conversation state machine
 
-`server/src/state/stateMachine.ts` is pure, LLM-free, and unit tested
+`server/src/state/stateMachine.ts` is pure, LLM-free, and unit-tested
 (`server/src/test/stateMachine.test.ts`). It models the flow as:
 
 ```
